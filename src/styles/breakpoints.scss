@@ -1,0 +1,40 @@
+@media screen and (min-width: 1000px) {
+  .recipe-browse {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: start;
+  }
+  .recipe-browse-filters {
+    width: 300px;
+  }
+  .recipe-browse-fields {
+    display: flex;
+  }
+  .recipes-list {
+    flex: 1;
+  }
+  .search-summary {
+    cursor: default;
+    i {
+      display: none;
+    }
+  }
+}
+
+@media screen and (min-width: 480px) {
+  main {
+    margin-left: 56px;
+  }
+  nav {
+    left: 0;
+    width: 56px;
+    will-change: width;
+  }
+  nav.active {
+    width: 220px;
+    transition: width 300ms;
+  }
+  #main-nav {
+    background-color: rgb(var(--theme-background));
+  }
+}

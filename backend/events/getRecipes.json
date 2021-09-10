@@ -1,0 +1,4 @@
+{
+    "httpMethod": "GET",
+    "rawQueryString": "fields[]=Name&fields[]=Description"
+}

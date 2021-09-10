@@ -1,0 +1,21 @@
+{
+    "name": "brown-family-backend",
+    "description": "Backend for the Brown family app",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "test:get-recipes": "node test.js ./src/getRecipes ./events/getRecipes.json",
+        "test:get-recipe": "node test.js ./src/getRecipe ./events/getRecipe.json",
+        "dev": "node buildAirtable && node devServer",
+        "build": "node buildAirtable && sam build --config-file prod.toml --profile bfam",
+        "package": "sam package --config-file prod.toml",
+        "deploy": "sam deploy --config-file prod.toml --guided",
+        "fullbuild": "npm run build && npm run deploy",
+        "delete": "sam delete --config-file prod.toml"
+    },
+    "dependencies": {
+        "archiver": "^5.3.0",
+        "body-parser": "^1.19.0",
+        "express": "^4.17.1"
+    }
+}

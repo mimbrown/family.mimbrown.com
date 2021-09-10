@@ -1,0 +1,221 @@
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Backend for the Brown family app.
+
+Parameters:
+  AirtableApiKey:
+    Type: String
+
+Transform: AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Creates a user pool in cognito for your app to auth against
+  # This example requires MFA and validates the phone number to use as MFA
+  # Other fields can be added to the schema
+  UserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: brown-family-user-pool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+        # InviteMessageTemplate:
+        #   EmailMessage: |
+        #     Hi! As you may know, I've been working on a Brown family website: https://family.mimbrown.com. Right now the main part of the site is the family recipe section; I would love this to be a repository for as many recipes as we can put in there. Anyone can view the recipes, but only signed-in users can edit. I've created an account for you so that you can add your recipes. To sign in, go to https://family.mimbrown.com. Use the following credentials.
+            
+        #     Username: {username}
+        #     Temporary Password: {####}
+            
+        #     Thanks,
+        #     Michael
+        #   EmailSubject: Access to the family recipes
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+      # EmailConfiguration:
+      #   EmailSendingAccount: DEVELOPER
+      #   From: Michael Brown <mimbrown94@gmail.com>
+      #   SourceArn: arn:aws:ses:us-east-1:249602936565:identity/mimbrown94@gmail.com
+      MfaConfiguration: "OFF"
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+
+  # Creates a User Pool Client to be used by the identity pool
+  UserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      ClientName: brown-family-user-pool-client
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+  
+  # Creates a federated Identity pool
+  IdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      IdentityPoolName: brown-family-identity-pool
+      AllowUnauthenticatedIdentities: true
+      CognitoIdentityProviders: 
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
+
+  # Create a role for unauthorized access to AWS resources. Very limited access. Only allows users in the previously created Identity Pool
+  CognitoUnauthorizedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": unauthenticated
+      Policies:
+        - PolicyName: "BrownFamilyUnauthorizedUserPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: "lambda:InvokeFunction"
+                Resource:
+                  - !GetAtt getRecipeFunction.Arn
+                  - !GetAtt getRecipesFunction.Arn
+
+  # Create a role for authorized acces to AWS resources. Control what your user can access. This example only allows Lambda invokation
+  # Only allows users in the previously created Identity Pool
+  CognitoAuthorizedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": authenticated
+      Policies:
+        - PolicyName: "BrownFamilyAuthorizedUserPolicy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: "lambda:InvokeFunction"
+                Resource:
+                  - !GetAtt getRecipeFunction.Arn
+                  - !GetAtt getRecipesFunction.Arn
+                  - !GetAtt createRecipeFunction.Arn
+                  - !GetAtt editRecipeFunction.Arn
+                  - !GetAtt deleteRecipeFunction.Arn
+  
+  # Assigns the roles to the Identity Pool
+  IdentityPoolRoleMapping:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthorizedRole.Arn
+        unauthenticated: !GetAtt CognitoUnauthorizedRole.Arn
+
+  getRecipeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: getRecipe
+      Handler: index.handler
+      CodeUri: src/getRecipe
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 5
+      Description: Retrieve a single recipe based on id.
+      Environment:
+        Variables:
+          AIRTABLE_API_KEY: !Ref AirtableApiKey
+
+  getRecipesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: getRecipes
+      Handler: index.handler
+      CodeUri: src/getRecipes
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 5
+      Environment:
+        Variables:
+          AIRTABLE_API_KEY: !Ref AirtableApiKey
+
+  createRecipeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: createRecipe
+      Handler: index.handler
+      CodeUri: src/createRecipe
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 5
+      Environment:
+        Variables:
+          AIRTABLE_API_KEY: !Ref AirtableApiKey
+
+  editRecipeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: editRecipe
+      Handler: index.handler
+      CodeUri: src/editRecipe
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 5
+      Environment:
+        Variables:
+          AIRTABLE_API_KEY: !Ref AirtableApiKey
+
+  deleteRecipeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: deleteRecipe
+      Handler: index.handler
+      CodeUri: src/deleteRecipe
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 5
+      Environment:
+        Variables:
+          AIRTABLE_API_KEY: !Ref AirtableApiKey
+
+Outputs:
+  IdentityPoolId:
+    Description: "The identity pool ID"
+    Value: !Ref IdentityPool
+  AppClientId:
+    Description: "The Cognito app client ID"
+    Value: !Ref UserPoolClient

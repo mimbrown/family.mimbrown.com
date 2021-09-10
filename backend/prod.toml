@@ -1,0 +1,12 @@
+version=0.1
+[default.global.parameters]
+stack_name = "brown-family-backend"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1if1ccr5cjf4m"
+s3_prefix = "brown-family-backend"
+region = "us-east-1"
+profile = "bfam"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+
+[default.deploy.parameters]
+

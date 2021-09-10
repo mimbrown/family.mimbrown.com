@@ -1,0 +1,12 @@
+node_modules
+.aws-sam
+build
+test-env.json
+env.json
+
+# These files are built
+src/createRecipe/airtable.js
+src/editRecipe/airtable.js
+src/deleteRecipe/airtable.js
+src/getRecipe/airtable.js
+src/getRecipes/airtable.js
