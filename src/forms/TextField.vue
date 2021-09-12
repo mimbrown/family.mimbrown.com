@@ -2,6 +2,7 @@
   <div v-bind="rootAttrs">
     <TextInput
       v-bind="$attrs"
+      :label="label"
       :labelAttrs="{ class: { error: isInErrorState } }"
       v-model="value"
       @blur="refreshState"
@@ -22,6 +23,10 @@ export default defineComponent({
   },
   props: {
     name: {
+      type: String,
+      required: true,
+    },
+    label: {
       type: String,
       required: true,
     },

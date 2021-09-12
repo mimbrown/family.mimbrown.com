@@ -1,7 +1,7 @@
 import { measurements, unconvert } from './measurement';
 import { Fraction } from './fraction';
 
-const fractionRegEx = /(?:(\d+)\s+)?(\d+)\/(\d+)(?!\d*" data-)/g;
+const fractionRegEx = /(\d+)\/(\d+)(?!\d*" data-)/g;
 const boldItRegEx = /\*\*\*(.+?)\*\*\*/g;
 const boldRegEx = /\*\*(.+?)\*\*/g;
 const itRegEx = /\*(.+?)\*/g;
@@ -23,11 +23,5 @@ export default function format(str: string) {
     .replace(boldRegEx, '<strong>$1</strong>')
     .replace(itRegEx, '<em>$1</em>')
     .replace(linkRegEx, '<a href="$2" target="_blank">$1</a>')
-    .replace(fractionRegEx, (_, int, numer, denom) => {
-      let str = `<sup>${numer}</sup>&frasl;<sub>${denom}</sub>`;
-      if (int) {
-        str = int + str;
-      }
-      return str;
-    });
+    .replace(fractionRegEx, '$1&frasl;$2');
 }

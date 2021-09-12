@@ -55,7 +55,7 @@ export function provideSession(): SessionCommands {
   const router = useRouter();
 
   const tokens = shallowRef(getInitialState());
-  const isSignedIn = computed(() => !!tokens.value);
+  const isSignedIn = computed(() => import.meta.env.DEV ? true : !!tokens.value);
 
   const lambdaClient = computed(() => {
     const credentials: FromCognitoIdentityPoolParameters = {

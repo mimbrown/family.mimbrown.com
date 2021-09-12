@@ -4,7 +4,8 @@
     "dev": "vite",
     "dev:server": "node backend/devServer",
     "stage": "vite -m production",
-    "build": "vue-tsc --noEmit && vite build",
+    "lint": "vue-tsc --noEmit",
+    "build": "vite build",
     "serve": "vite preview"
   },
   "dependencies": {
